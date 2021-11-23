@@ -8,7 +8,7 @@ void hexdump(void *data, size_t size)
 {
   for (size_t i = 0; i < size; i += 16)
   {
-    printf("%p\t", data + i);
+    printf("%p\t", (uint8_t *)data + i);
     int k;
     for (k = 0; k < 16 && (k + i) < size; k++)
     {

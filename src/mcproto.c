@@ -223,13 +223,13 @@ uint8_t *mc_read_varint(uint8_t *buf, int32_t *value)
   int bitOffset = 0;
   uint8_t currentByte;
   do {
-    if (bitOffset >= 35) {
+    if (bitOffset >= 5) {
       *value = 0;
       return NULL;
     }
     currentByte = (*buf++);
-    *value |= (currentByte & 0x7f) << bitOffset;
-    bitOffset += 7;
+    *value |= (currentByte & 0x7f) << (bitOffset * 7);
+    bitOffset++;
   } while ((currentByte & 0x80) != 0);
   return buf;
 }
@@ -240,13 +240,13 @@ uint8_t *mc_read_varlong(uint8_t *buf, int64_t *value)
   int bitOffset = 0;
   uint8_t currentByte;
   do {
-    if (bitOffset >= 70) {
-      value = 0;
+    if (bitOffset >= 10) {
+      *value = 0;
       return NULL;
     }
     currentByte = (*buf++);
-    *value |= (currentByte & 0x7f) << bitOffset;
-    bitOffset += 7;
+    *value |= (currentByte & 0x7f) << (bitOffset * 7);
+    bitOffset++;
   } while ((currentByte & 0x80) != 0);
   return buf;
 }

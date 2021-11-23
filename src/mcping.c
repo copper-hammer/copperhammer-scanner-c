@@ -43,7 +43,7 @@ ssize_t mc_ping_sock(const char *host, const uint16_t port, const struct socket_
   if (result_len < 0 || result_len > 32767)
     return -1;
   if (result_len < lim)
-    memset(buffer + result_len, 0, lim - result_len);
+    memset((uint8_t *)buffer + result_len, 0, lim - result_len);
   return result_len;
 }
 
@@ -56,8 +56,8 @@ ssize_t mc_ping_make_packet(const char *host, uint16_t port, int32_t ver, void *
   tp += mc_write_ushort(tp, port);
   tp += mc_write_varint(tp, 1); // NEXT_STATE=STATUS
   size_t packet_size = tp - (uint8_t *)buffer;
-  memmove(buffer + mc_size_varnum(packet_size), buffer, packet_size);
-  tp = buffer + mc_write_varint(buffer, packet_size) + packet_size;
+  memmove((uint8_t *)buffer + mc_size_varnum(packet_size), buffer, packet_size);
+  tp = ((uint8_t *)buffer) + mc_write_varint(buffer, packet_size) + packet_size;
   tp += mc_write_varint(tp, 1);
   tp += mc_write_ubyte(tp, 0);
   return tp - (uint8_t *)buffer;

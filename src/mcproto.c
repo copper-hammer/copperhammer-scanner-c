@@ -224,7 +224,7 @@ uint8_t *mc_read_varint(uint8_t *buf, int32_t *value)
   uint8_t currentByte;
   do {
     if (bitOffset >= 35) {
-      value = 0;
+      *value = 0;
       return NULL;
     }
     currentByte = (*buf++);

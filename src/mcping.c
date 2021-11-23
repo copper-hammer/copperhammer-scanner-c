@@ -22,12 +22,14 @@ ssize_t mc_ping(const char *host, const uint16_t port, void *buffer, size_t lim)
 
 ssize_t mc_ping_sock(const char *host, const uint16_t port, const struct socket_t *sock, void *buffer, size_t lim)
 {
-  void *packet = malloc(strlen(host) + 10);
+  uint8_t *packet = malloc(strlen(host) + 10);
   ssize_t pkt_size = mc_ping_make_packet(host, port, -1, packet, strlen(host) + 10);
   socket_send((struct socket_t *)sock, packet, pkt_size);
+  free(packet);
+
   socket_recv((struct socket_t *)sock, buffer, lim);
   int32_t length;
-  void *tp;
+  uint8_t *tp;
   if ((tp = mc_read_varint(buffer, &length)) == NULL)
     return -1;
   if (length < 0 || length > 32767)
@@ -37,7 +39,7 @@ ssize_t mc_ping_sock(const char *host, const uint16_t port, const struct socket_
   if (pkt_type != 0x00)
     return -1;
   int32_t result_len;
-  tp = mc_read_string(tp, buffer, &result_len, lim);
+  mc_read_string(tp, buffer, &result_len, lim);
   if (result_len < 0 || result_len > 32767)
     return -1;
   if (result_len < lim)
@@ -47,17 +49,17 @@ ssize_t mc_ping_sock(const char *host, const uint16_t port, const struct socket_
 
 ssize_t mc_ping_make_packet(const char *host, uint16_t port, int32_t ver, void *buffer, size_t lim)
 {
-  void *tp = buffer;
+  uint8_t *tp = buffer;
   tp += mc_write_ubyte(tp, 0x00); // PACKET_HANDSHAKE
   tp += mc_write_varint(tp, ver);
   tp += mc_write_string(tp, (char *)host, strlen(host));
   tp += mc_write_ushort(tp, port);
   tp += mc_write_varint(tp, 1); // NEXT_STATE=STATUS
-  size_t packet_size = tp - buffer;
+  size_t packet_size = tp - (uint8_t *)buffer;
   memmove(buffer + mc_size_varnum(packet_size), buffer, packet_size);
   tp = buffer + mc_write_varint(buffer, packet_size) + packet_size;
   tp += mc_write_varint(tp, 1);
   tp += mc_write_ubyte(tp, 0);
-  return tp - buffer;
+  return tp - (uint8_t *)buffer;
 }
 

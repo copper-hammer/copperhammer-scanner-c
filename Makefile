@@ -1,6 +1,6 @@
-CC=gcc
-CFLAGS=-g -lm -Wall -pedantic -Wno-pointer-arith
-LIBRARIES=lib/sockio.o lib/mcping.o lib/utils.o lib/mcproto.o
+CFLAGS=-g -Wall -pedantic -Wno-pointer-arith
+LDLIBS=-lm
+LIBOBJS=lib/sockio.o lib/mcping.o lib/utils.o lib/mcproto.o
 
 all: main
 	
@@ -8,10 +8,10 @@ run: all
 	bin/main
 
 clean:
-	rm ${LIBRARIES} bin/main || true
+	${RM} ${LIBOBJS} bin/main || true
 
-main: ${LIBRARIES} Makefile
-	${CC} ${CFLAGS} ${LIBRARIES} src/main.c -o bin/main
+main: ${LIBOBJS}
+	${CC} ${CFLAGS} ${LDLIBS} ${LIBOBJS} src/main.c -o bin/main
 
 lib/%.o: src/%.c
 	${CC} ${CFLAGS} -c $< -o $@

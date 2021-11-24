@@ -53,7 +53,7 @@ void die(char *reason)
 
 int main(int argc, char **argv)
 {
-  uint16_t range_start = DEFAULT_PORT1, range_end = DEFAULT_PORT2;
+  int32_t range_start = DEFAULT_PORT1, range_end = DEFAULT_PORT2;
   char *host = DEFAULT_HOST;
   outmode_n output_mode = OMODE_TEXT;
   FILE *outfile = stdout;
@@ -134,6 +134,7 @@ int main(int argc, char **argv)
     {
       struct serverinfo_t info;;
       strncpy(info.host, host, 64);
+      info.host[63] = '\0';
       info.port = port;
       info.response_len = len;
       memcpy(info.response, buffer, 32768);

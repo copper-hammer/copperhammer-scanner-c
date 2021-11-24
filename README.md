@@ -28,7 +28,6 @@ servers.
 ## Building from source
 At first you need to clone this repository. Note that we're using library
 `cJSON` as submodule, so you have to clone it recursively:
-
 ```bash
 git clone https://github.com/copper-hammer/copperhammer-scanner-c --recursive
 cd copperhammer-scanner-c
@@ -46,4 +45,3 @@ However, if you really want to, you can just copy it anywhere you want:
 ```bash
 sudo cp ./bin/main /usr/local/bin/copperscan
 ```
-

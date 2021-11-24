@@ -1,3 +1,6 @@
 [submodule "src/extras/cjson"]
 	path = src/extras/cjson
 	url = https://github.com/DaveGamble/cJSON
+[submodule "src/extras/stb"]
+	path = src/extras/stb
+	url = https://github.com/nothings/stb

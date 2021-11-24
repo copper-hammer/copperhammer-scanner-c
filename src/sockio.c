@@ -1,17 +1,24 @@
+#include "logging.h"
 #include "sockio.h"
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 
 bool socket_init()
 {
   // POSIX socket does not require initialization
+  // TODO: Windows (winsock2) support
   return true;
 }
 
 struct socket_t *socket_create(const char *host, const uint16_t port, int type)
 {
-  if (type != AF_INET && type != AF_INET6) return NULL;
+  if (type != AF_INET && type != AF_INET6)
+  {
+    DBG(LOG_WARN, "Invalid socket type %d, expected AF_INET or AF_INET6", type);
+    return NULL;
+  }
   struct socket_t *sock = malloc(sizeof(struct socket_t));
   memset(sock, 0, sizeof(struct socket_t));
   sock->domain = type;
@@ -25,6 +32,7 @@ struct socket_t *socket_create(const char *host, const uint16_t port, int type)
       sock->address.v4->sin_port = htons(port);
       if (inet_pton(AF_INET, host, (void *)&sock->address.v4->sin_addr) != 1)
       {
+        DBG(LOG_WARN, "Invalid IPv4 address: %s (%s)", host, strerror(errno));
         free(sock->address.v6);
         free(sock);
         return NULL;
@@ -37,13 +45,20 @@ struct socket_t *socket_create(const char *host, const uint16_t port, int type)
       sock->address.v6->sin6_port = htons(port);
       if(inet_pton(AF_INET6, host, (void *)&sock->address.v6->sin6_addr) != 1)
       {
+        DBG(LOG_WARN, "Invalid IPv6 address: %s (%s)", host, strerror(errno));
         free(sock->address.v6);
         free(sock);
         return NULL;
       }
       break;
   }
-  sock->sockfd = socket(sock->domain, sock->type, sock->protocol);
+  if ((sock->sockfd = socket(sock->domain, sock->type, sock->protocol)) == -1)
+  {
+    DBG(LOG_TRACE, "Socket creation failed: %s", strerror(errno));
+    socket_close(sock);
+    return NULL;
+  }
+  
   return sock;
 }
 
@@ -58,31 +73,43 @@ int socket_settimeout(struct socket_t *sock, uint64_t msec)
 
 int socket_connect(struct socket_t *sock)
 {
+  int result = -1;
   switch (sock->domain)
   {
     case AF_INET:
-      return connect(sock->sockfd,
+      result = connect(sock->sockfd,
           (struct sockaddr *)sock->address.v4, sizeof(struct sockaddr));
+      break;
     case AF_INET6:
-      return connect(sock->sockfd,
+      result = connect(sock->sockfd,
           (struct sockaddr *)sock->address.v6, sizeof(struct sockaddr_in6));
+      break;
   }
-  return -1;
+  if (result != 0)
+    DBG(LOG_WARN, "Connection failed: %s", strerror(errno));
+  return result;
 }
 
 ssize_t socket_send(struct socket_t *sock, const void *data, size_t length)
 {
-  return send(sock->sockfd, data, length, 0);
+  ssize_t res = send(sock->sockfd, data, length, 0);
+  if (res < 0)
+    DBG(LOG_WARN, "Send failed: %s", strerror(errno));
+  return res;
 }
 
 ssize_t socket_recv(struct socket_t *sock, void *data, size_t lim)
 {
-  return recv(sock->sockfd, data, lim, 0);
+  ssize_t res = recv(sock->sockfd, data, lim, 0);
+  if (res < 0)
+    DBG(LOG_WARN, "Recv failed: %s", strerror(errno));
+  return res;
 }
 
 void socket_close(struct socket_t *sock)
 {
-  close(sock->sockfd);
+  if (sock->sockfd >= 0)
+    close(sock->sockfd);
   switch (sock->domain)
   {
     case AF_INET:

@@ -1,5 +1,6 @@
 #ifndef _MCPROTO_H_
 #define _MCPROTO_H_
+#include "logging.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>

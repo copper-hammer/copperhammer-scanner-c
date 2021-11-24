@@ -1,3 +1,4 @@
+#include "logging.h"
 #include "mcping.h"
 #include "mcproto.h"
 #include "sockio.h"
@@ -5,46 +6,88 @@
 
 ssize_t mc_ping(const char *host, const uint16_t port, void *buffer, size_t lim)
 {
+ if (mc_ping_raw(host, port, buffer, lim) < 0)
+   return -1;
+ uint8_t type;
+ return mc_ping_extract_packet(&type, buffer, lim);
+}
+
+ssize_t mc_ping_sock(const char *host, const uint16_t port, const struct socket_t *sock, void *buffer, size_t lim)
+{
+ if (mc_ping_sock_raw(host, port, sock, buffer, lim) < 0)
+   return -1;
+ uint8_t type;
+ return mc_ping_extract_packet(&type, buffer, lim);
+}
+
+ssize_t mc_ping_raw(const char *host, const uint16_t port, void *buffer, size_t lim)
+{
   struct socket_t *sock = socket_create(host, port, is_ipv6(host) ? AF_INET6 : AF_INET);
+  DBG(LOG_TRACE, "Setting timeout");
   socket_settimeout(sock, 500);
   ssize_t res;
+  DBG(LOG_TRACE, "Connecting to %s:%d...", host, port);
   if ((res = socket_connect(sock)) != 0)
   {
+    DBG(LOG_WARN, "Failed to connect to %s:%d", host, port);
     socket_close(sock);
     return res;
   }
   
-  res = mc_ping_sock(host, port, (const struct socket_t *)sock, buffer, lim);
+  res = mc_ping_sock_raw(host, port, (const struct socket_t *)sock, buffer, lim);
 
   socket_close(sock);
   return res;
 }
 
-ssize_t mc_ping_sock(const char *host, const uint16_t port, const struct socket_t *sock, void *buffer, size_t lim)
+ssize_t mc_ping_extract_packet(uint8_t *pkt_type, void *buffer, size_t lim)
 {
-  uint8_t *packet = malloc(strlen(host) + 10);
-  ssize_t pkt_size = mc_ping_make_packet(host, port, -1, packet, strlen(host) + 10);
-  socket_send((struct socket_t *)sock, packet, pkt_size);
-  free(packet);
-
-  socket_recv((struct socket_t *)sock, buffer, lim);
   int32_t length;
   uint8_t *tp;
   if ((tp = mc_read_varint(buffer, &length)) == NULL)
+  {
+    DBG(LOG_WARN, "Failed to read varint");
     return -1;
+  }
   if (length < 0 || length > 32767)
+  {
+    DBG(LOG_WARN, "Packet is too long");
     return -1;
-  uint8_t pkt_type;
-  tp = mc_read_ubyte(tp, &pkt_type);
-  if (pkt_type != 0x00)
+  }
+  tp = mc_read_ubyte(tp, pkt_type);
+  if ((*pkt_type) != 0x00)
+  {
+    DBG(LOG_WARN, "Invalid packet, expected %02x, got %02x", 0, *pkt_type);
     return -1;
+  }
   int32_t result_len;
   mc_read_string(tp, buffer, &result_len, lim);
   if (result_len < 0 || result_len > 32767)
+  {
+    DBG(LOG_WARN, "String is too long (%d)", result_len);
     return -1;
+  }
   if (result_len < lim)
     memset((uint8_t *)buffer + result_len, 0, lim - result_len);
   return result_len;
+}
+
+ssize_t mc_ping_sock_raw(const char *host, const uint16_t port, const struct socket_t *sock, void *buffer, size_t lim)
+{
+  uint8_t *packet = malloc(strlen(host) + 10);
+  DBG(LOG_TRACE, "Allocated memory for packet: %p", packet);
+  ssize_t pkt_size = mc_ping_make_packet(host, port, -1, packet, strlen(host) + 10);
+  DBG(LOG_TRACE, "Packet constructed: %ld", pkt_size);
+  
+  DBG(LOG_TRACE, "Sending packet %p to %s:%d", packet, host, port);
+  ssize_t r = socket_send((struct socket_t *)sock, packet, pkt_size);
+  DBG(LOG_TRACE, "Sending %p to %s:%d finished with %ld", packet, host, port, r);
+  DBG(LOG_TRACE, "Freeing packet");
+  free(packet);
+
+  r = socket_recv((struct socket_t *)sock, buffer, lim);
+  DBG(LOG_TRACE, "Got response from %s:%d %ld", host, port, r);
+  return r;
 }
 
 ssize_t mc_ping_make_packet(const char *host, uint16_t port, int32_t ver, void *buffer, size_t lim)

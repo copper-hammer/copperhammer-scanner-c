@@ -1,3 +1,4 @@
+#include "extras/cjson/cJSON.h"
 #include "logging.h"
 #include "utils.h"
 #include "mcping.h"
@@ -7,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <getopt.h>
+#include <sys/time.h>
 
 #define DEFAULT_HOST "127.0.0.1"
 #define DEFAULT_PORT1 22
@@ -53,6 +55,10 @@ void die(char *reason)
 
 int main(int argc, char **argv)
 {
+  struct timeval tv_start, tv_stop;
+  
+  gettimeofday(&tv_start, NULL);
+
   int32_t range_start = DEFAULT_PORT1, range_end = DEFAULT_PORT2;
   char *host = DEFAULT_HOST;
   outmode_n output_mode = OMODE_TEXT;
@@ -125,10 +131,14 @@ int main(int argc, char **argv)
   
   struct serverinfo_t *servers;
   uint8_t buffer[32768];
+  ssize_t len;
   for (uint16_t port = range_start; port <= range_end; port++)
   {
     DBG(LOG_INFO, "Scanning %s:%d", host, port);
-    ssize_t len = mc_ping(host, port, buffer, 32768);
+    if (output_mode == OMODE_HEX)
+      len = mc_ping_raw(host, port, buffer, 32768);
+    else
+      len = mc_ping(host, port, buffer, 32768);
     DBG(LOG_DEBUG, "Result: %ld", len);
     if (len >= 0)
     {
@@ -142,20 +152,79 @@ int main(int argc, char **argv)
     }
   }
   
-  
-  for (int i = 0; i < arrlen(servers); i++)
+  gettimeofday(&tv_stop, NULL);
+  double execution_time = (double)(tv_stop.tv_usec - tv_start.tv_usec) / 1e6;
+  execution_time += (double)(tv_stop.tv_sec - tv_start.tv_sec);
+
+  struct serverinfo_t info;
+  if (output_mode != OMODE_JSON)
   {
-    struct serverinfo_t info = servers[i];
-    printf("Server at %s:%d\n", info.host, info.port);
-    hexdump(info.response, info.response_len);
+    cJSON *root;
+    fprintf(outfile, "Execution time: %lf\n", execution_time);
+    for (int i = 0; i < arrlen(servers); i++)
+    {
+      info = servers[i];
+      switch (output_mode)
+      {
+        case OMODE_HEX:
+          fprintf(outfile, "Server: %s:%d:\n", info.host, info.port);
+          hexdumpf_relative(info.response, info.response_len, outfile);
+          fprintf(outfile, "\n");
+          break;
+
+        case OMODE_RAW:
+          fprintf(outfile, "Server: %s:%d:\n", info.host, info.port);
+          fwrite(info.response, 1, info.response_len, outfile);
+          fprintf(outfile, "\n");
+          break;
+
+        case OMODE_TEXT:
+          fprintf(outfile, "Server: %s:%d:\n", info.host, info.port);
+          if ((root = cJSON_ParseWithLength((char *)info.response, info.response_len)) == NULL)
+          {
+            DBG(LOG_ERROR, "Invalid JSON received");
+            fprintf(outfile, "Error: Invalid JSON\n");
+            fprintf(outfile, "\n");
+            continue;
+          }
+          // TODO: print all data as tree
+
+          fprintf(outfile, "\n");
+        
+        // should not happen
+        case OMODE_JSON:
+          break;
+      }
+    }
+  }
+  else
+  {
+    cJSON *response = cJSON_CreateObject();
+    if (response == NULL) die("Failed to create root JSON node");
+    cJSON *j_results = cJSON_CreateArray();
+    if (j_results == NULL) die("Failed to create results array");
+    cJSON *j_duration = cJSON_CreateNumber(execution_time);
+    if (j_duration == NULL) die("Failed to create execution time");
+    cJSON_AddItemToObject(response, "duration", j_duration);
+    
+    cJSON *j_info, *jr_host, *jr_port;
+    cJSON *jr_ver, *jr_vername, *jr_protocol, *jr_is_modded, *jr_mods;
+    cJSON *jrp_online, *jrp_max, *jrp_sample, *jrps_uuid, *jrps_name;
+    for (int i = 0; i < arrlen(servers); i++)
+    {
+      if ((j_info = cJSON_ParseWithLength((char *)info.response, info.response_len)) == NULL)
+      {
+        DBG(LOG_ERROR, "Failed to parse response %s:%d", info.host, info.port);
+        continue;
+      }
+      jr_host = cJSON_CreateString(info.host);
+      jr_port = cJSON_CreateNumber((double)info.port);
+      jr_ver = cJSON_CreateObject();
+      // TODO: deconstruct that lol
+    }
+
   }
 
-  /*
-  void *buffer = malloc(256);
-  ssize_t l = mc_ping(argv[1], port == 0 ? 25565 : port, buffer, 256);
-  printf("result: %ld\n", l);
-  hexdump(buffer, 256);
-  */
   if (outfile != stdout)
     fclose(outfile);
   

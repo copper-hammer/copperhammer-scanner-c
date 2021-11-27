@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+void hexdump_impl(void *data, size_t size, int type, FILE *file);
+
 void hexdump(void *data, size_t size)
 {
   hexdumpf(data, size, stdout);
@@ -30,7 +32,7 @@ void hexdump_impl(void *data, size_t size, int type, FILE *file)
     if (type == 0)
       fprintf(file, "%p\t", (void *)((uint8_t *)data + i));
     else
-      fprintf(file, "%08lx\t", i);
+      fprintf(file, "%08lx\t", (uint64_t)i);
     int k;
     for (k = 0; k < 16 && (k + i) < size; k++)
     {
@@ -53,3 +55,4 @@ void hexdump_impl(void *data, size_t size, int type, FILE *file)
     fprintf(file, "|\n");
   }
 }
+

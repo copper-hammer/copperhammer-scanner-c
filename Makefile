@@ -1,7 +1,8 @@
 CFLAGS=-g -Wall -pedantic -Wno-pointer-arith
-LDFLAGS=-L./src/extras/cjson
-LDLIBS=-lm -lcjson
+LDFLAGS=
+LDLIBS=-lm
 LIBOBJS=lib/sockio.o lib/mcping.o lib/utils.o lib/mcproto.o lib/stb_ds.o lib/logging.o
+EXTLIBS=src/extras/cjson/cJSON.o
 
 all: main
 	
@@ -13,7 +14,7 @@ clean:
 	( cd src/extras/cjson; make clean )
 
 main: cjson ${LIBOBJS}
-	${CC} ${CFLAGS} ${LIBOBJS} src/main.c -o bin/main ${LDFLAGS} ${LDLIBS}
+	${CC} ${CFLAGS} ${LIBOBJS} ${EXTLIBS} src/main.c -o bin/main ${LDFLAGS} ${LDLIBS}
 
 lib/%.o: src/%.c
 	${CC} ${CFLAGS} -c $< -o $@

@@ -1,7 +1,7 @@
 #include "logging.h"
 #include "mcproto.h"
 #include "sockio.h"
-#include <endian.h>
+#include "endian.h"
 #include <math.h>
 
 size_t mc_size_varnum(int64_t value)

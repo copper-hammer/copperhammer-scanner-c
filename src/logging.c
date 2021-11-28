@@ -1,4 +1,5 @@
 #include "logging.h"
+#include "utils.h"
 #include <stdarg.h>
 
 const char *loglevel_names[7] = {
@@ -13,6 +14,13 @@ void debug_print(char *filename, int line, loglevel_n level, const char *fmt, ..
   vsnprintf(buffer, 2048, fmt, args);
   fprintf(stderr, "%-5s %s:%d: %s\n", get_loglevel_name(level), filename, line, buffer);
   va_end(args);
+}
+
+void debug_hexdump(char *filename, int line, loglevel_n level, const void *ptr, size_t length)
+{
+  char buffer[1024];
+  snprintf(buffer, 1024, "%-5s %s:%d: ", get_loglevel_name(level), filename, line);
+  hexdumpfp(ptr, length, stderr, buffer);
 }
 
 const char *get_loglevel_name(loglevel_n level)

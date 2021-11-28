@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     }
   }
   loglevel = verbosity;
-  
+
   for (int i = 0; i < argc; i++)
     DBG(LOG_TRACE, "argv[%d] = %s", i, argv[i]);
   
@@ -135,10 +135,26 @@ int main(int argc, char **argv)
   for (uint16_t port = range_start; port <= range_end; port++)
   {
     DBG(LOG_INFO, "Scanning %s:%d", host, port);
+    struct socket_t *sock = socket_create(host, port, AF_INET);
+    socket_settimeout(sock, 500);
+    if (socket_connect(sock) < 0)
+    {
+      socket_close(sock);
+      continue;
+    }
+    
+    if (mcp_send_ping(sock, host, port, 756) < 0)
+    {
+      socket_close(sock);
+      continue;
+    }
+    
     if (output_mode == OMODE_HEX)
-      len = mc_ping_raw(host, port, buffer, 32768);
+      len = socket_recv(sock, buffer, 32768);
     else
-      len = mc_ping(host, port, buffer, 32768);
+      len = mcp_read_pong(sock, buffer, 32768);
+
+    socket_close(sock);
     DBG(LOG_DEBUG, "Result: %ld", len);
     if (len >= 0)
     {
@@ -173,7 +189,7 @@ int main(int argc, char **argv)
           break;
 
         case OMODE_RAW:
-          fprintf(outfile, "Server: %s:%d:\n", info.host, info.port);
+          fprintf(outfile, "Server: %s:%d (%zd bytes):\n", info.host, info.port, info.response_len);
           fwrite(info.response, 1, info.response_len, outfile);
           fprintf(outfile, "\n");
           break;

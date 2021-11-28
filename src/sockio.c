@@ -24,6 +24,8 @@ struct socket_t *socket_create(const char *host, const uint16_t port, int type)
   sock->domain = type;
   sock->type = SOCK_STREAM;
   sock->protocol = 0;
+  strncpy(sock->host, host, 128);
+  sock->port = port;
   switch (sock->domain)
   {
     case AF_INET:
@@ -86,24 +88,51 @@ int socket_connect(struct socket_t *sock)
       break;
   }
   if (result != 0)
-    DBG(LOG_WARN, "Connection failed: %s", strerror(errno));
+    DBG(LOG_WARN, "%s:%d: %s", sock->host, sock->port, strerror(errno));
   return result;
 }
 
 ssize_t socket_send(struct socket_t *sock, const void *data, size_t length)
 {
+  DBG(LOG_TRACE, "Sending %zd bytes at %p to %d:", length, data, sock->sockfd);
+  DHEX(LOG_TRACE, data, length);
   ssize_t res = send(sock->sockfd, data, length, 0);
   if (res < 0)
     DBG(LOG_WARN, "Send failed: %s", strerror(errno));
   return res;
 }
 
+ssize_t __socket_recv(struct socket_t *sock, void *data, size_t lim, int flags)
+{
+  DBG(LOG_TRACE, "recv(sock:%d, data:%p, lim:%zu, flags:%08x) called",
+      sock->sockfd, data, lim, flags);
+  ssize_t res = recv(sock->sockfd, data, lim, flags);
+  DBG(LOG_TRACE, "recv(sock:%d, data:%p, lim:%zu, flags:%08x): %zd",
+      sock->sockfd, data, lim, flags, res);
+  if (res < 0)
+  {
+    DBG(LOG_WARN, "Recv failed: %s", strerror(errno));
+  }
+  else
+  {
+    DHEX(LOG_TRACE, data, res);
+  }
+  return res;
+}
+
 ssize_t socket_recv(struct socket_t *sock, void *data, size_t lim)
 {
-  ssize_t res = recv(sock->sockfd, data, lim, 0);
-  if (res < 0)
-    DBG(LOG_WARN, "Recv failed: %s", strerror(errno));
-  return res;
+  return __socket_recv(sock, data, lim, 0);
+}
+
+ssize_t socket_recvall(struct socket_t *sock, void *data, size_t len)
+{
+  return __socket_recv(sock, data, len, MSG_WAITALL);
+}
+
+ssize_t socket_peek(struct socket_t *sock, void *data, size_t len)
+{
+  return __socket_recv(sock, data, len, MSG_PEEK | MSG_WAITALL);
 }
 
 void socket_close(struct socket_t *sock)

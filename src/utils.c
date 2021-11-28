@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-void hexdump_impl(void *data, size_t size, int type, FILE *file);
+void hexdump_impl(void *data, size_t size, int type, FILE *file, const char *prefix);
 
 void hexdump(void *data, size_t size)
 {
@@ -17,22 +17,27 @@ void hexdump_relative(void *data, size_t size)
 
 void hexdumpf(void *data, size_t size, FILE *file)
 {
-  hexdump_impl(data, size, 0, file);
+  hexdump_impl(data, size, 0, file, "");
 }
 
 void hexdumpf_relative(void *data, size_t size, FILE *file)
 {
-  hexdump_impl(data, size, 1, file);
+  hexdump_impl(data, size, 1, file, "");
 }
 
-void hexdump_impl(void *data, size_t size, int type, FILE *file)
+void hexdumpfp(void *data, size_t size, FILE *file, const char *prefix)
+{
+  hexdump_impl(data, size, 0, file, prefix);
+}
+
+void hexdump_impl(void *data, size_t size, int type, FILE *file, const char *prefix)
 {
   for (size_t i = 0; i < size; i += 16)
   {
     if (type == 0)
-      fprintf(file, "%p\t", (void *)((uint8_t *)data + i));
+      fprintf(file, "%s%p\t| ", prefix, (void *)((uint8_t *)data + i));
     else
-      fprintf(file, "%08lx\t", (uint64_t)i);
+      fprintf(file, "%s%08zx\t| ", prefix, i);
     int k;
     for (k = 0; k < 16 && (k + i) < size; k++)
     {
@@ -44,7 +49,7 @@ void hexdump_impl(void *data, size_t size, int type, FILE *file)
       fprintf(file, "--");
       if (k % 4 == 3) fprintf(file, " ");
     }
-    fprintf(file, "\t|");
+    fprintf(file, "|\t|");
     for (k = 0; k < 16 && (k + i) < size; k++)
     {
       if (isprint(((char *)data)[k + i]))
@@ -53,6 +58,17 @@ void hexdump_impl(void *data, size_t size, int type, FILE *file)
         fprintf(file, ".");
     }
     fprintf(file, "|\n");
+  }
+}
+
+void swap_bytes(void *data, size_t len)
+{
+  uint8_t *ptr = data, tmp;
+  for (ssize_t i = 0; i < len / 2; i++)
+  {
+    tmp = ptr[i];
+    ptr[i] = ptr[len - i - 1];
+    ptr[len - i - 1] = tmp;
   }
 }
 

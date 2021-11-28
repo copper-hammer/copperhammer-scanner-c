@@ -1,10 +1,11 @@
 #ifndef _LOGGING_H_
 #define _LOGGING_H_
 #include <stdio.h>
-#define DBG(level, ...) if (level <= loglevel) debug_print(__FILE__, __LINE__, level, __VA_ARGS__)
-#define DBGK(level, ...) if (level <= loglevel) fprintf(stderr, __VA_ARGS__)
 
 #define loglevel (*__get_loglevel_addr())
+#define DBG(level, ...) if (level <= loglevel) debug_print(__FILE__, __LINE__, level, __VA_ARGS__)
+#define DHEX(level, ptr, len) if (level <= loglevel) debug_hexdump(__FILE__, __LINE__, level, ptr, len)
+#define DBGK(level, ...) if (level <= loglevel) fprintf(stderr, __VA_ARGS__)
 
 typedef enum {
   LOG_NONE = 0,
@@ -18,6 +19,7 @@ typedef enum {
 
 extern loglevel_n *__get_loglevel_addr(void);
 void debug_print(char *filename, int line, loglevel_n level, const char *fmt, ...);
+void debug_hexdump(char *filename, int line, loglevel_n level, const void *ptr, size_t length);
 const char *get_loglevel_name(loglevel_n level);
 
 #endif

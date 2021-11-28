@@ -15,8 +15,14 @@ ssize_t mcp_send_ping(struct socket_t *sock, const char *host, const uint16_t po
 ssize_t mcp_read_pong(struct socket_t *sock, void *buffer, size_t lim)
 {
   int32_t len;
+#if __APPLE__
+  size_t lim_backup_macos_sucks = lim;
+#endif
   if (mc_sread_varint(sock, &len) <= 0)
     return -1;
+#if __APPLE__
+  lim = lim_backup_macos_sucks;
+#endif
   if (len <= 0 || len > 32768)
     return -1;
   size_t n_bytes = lim < len ? lim : len;

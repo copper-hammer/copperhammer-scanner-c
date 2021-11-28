@@ -17,6 +17,8 @@ ssize_t mcp_read_pong(struct socket_t *sock, void *buffer, size_t lim)
   int32_t len;
   if (mc_sread_varint(sock, &len) <= 0)
     return -1;
+  if (len <= 0 || len > 32768)
+    return -1;
   size_t n_bytes = lim < len ? lim : len;
   size_t r;
   DBG(LOG_TRACE, "pkt %zd long, %zd limit", len, lim);
@@ -31,7 +33,8 @@ ssize_t mcp_read_pong(struct socket_t *sock, void *buffer, size_t lim)
   uint8_t pkt_type;
   tp = mc_read_ubyte(tp, &pkt_type);
   DBG(LOG_TRACE, "pkt type: %02x", pkt_type);
-  // TODO(hkc): packet type check
+  if (pkt_type != 0x00)
+    return -1;
   tp = mc_read_string(tp, buffer, &len, lim);
   if (len < lim)
     memset((uint8_t *)buffer + len, 0, lim - len);

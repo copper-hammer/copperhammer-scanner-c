@@ -217,28 +217,93 @@ int main(int argc, char **argv)
   {
     cJSON *response = cJSON_CreateObject();
     if (response == NULL) die("Failed to create root JSON node");
-    cJSON *j_results = cJSON_CreateArray();
+    cJSON *j_results = cJSON_AddArrayToObject(response, "results");
     if (j_results == NULL) die("Failed to create results array");
     cJSON *j_duration = cJSON_CreateNumber(execution_time);
     if (j_duration == NULL) die("Failed to create execution time");
     cJSON_AddItemToObject(response, "duration", j_duration);
     
-    cJSON *j_info, *jr_host, *jr_port;
-    cJSON *jr_ver, *jr_vername, *jr_protocol, *jr_is_modded, *jr_mods;
-    cJSON *jrp_online, *jrp_max, *jrp_sample, *jrps_uuid, *jrps_name;
+    char modname[1024];
+    char servername[8192];
+    cJSON *j_info;
     for (int i = 0; i < arrlen(servers); i++)
     {
+      info = servers[i];
+      DBG(LOG_INFO, "Adding %s:%d", info.host, info.port);
       if ((j_info = cJSON_ParseWithLength((char *)info.response, info.response_len)) == NULL)
       {
         DBG(LOG_ERROR, "Failed to parse response %s:%d", info.host, info.port);
         continue;
       }
-      jr_host = cJSON_CreateString(info.host);
-      jr_port = cJSON_CreateNumber((double)info.port);
-      jr_ver = cJSON_CreateObject();
-      // TODO: deconstruct that lol
+      
+      cJSON *ji_version = cJSON_GetObjectItem(j_info, "version");
+      cJSON *ji_players = cJSON_GetObjectItem(j_info, "players");
+      cJSON *ji_modinfo = cJSON_GetObjectItem(j_info, "modinfo");
+      cJSON *ji_message = cJSON_GetObjectItem(j_info, "description");
+      
+      cJSON *server = cJSON_CreateObject();
+      cJSON_AddStringToObject(server, "host", info.host);
+      cJSON_AddNumberToObject(server, "port", info.port);
+      mcs_chat_to_string(ji_message, servername, 8192);
+      cJSON_AddStringToObject(server, "description", servername);
+      cJSON *jic_message = cJSON_Duplicate(ji_message, true);
+      cJSON_AddItemToObject(server, "description_raw", jic_message);
+      
+
+      cJSON *version = cJSON_AddObjectToObject(server, "version");
+      cJSON_AddStringToObject(version, "name",
+          cJSON_GetObjectItem(ji_version, "name")->valuestring);
+      cJSON_AddNumberToObject(version, "protocol",
+          cJSON_GetObjectItem(ji_version, "protocol")->valueint);
+      cJSON_AddBoolToObject(version, "is_modded", ji_modinfo != NULL);
+      if (ji_modinfo != NULL)
+      {
+        cJSON *modloader = cJSON_GetObjectItem(ji_modinfo, "type");
+        cJSON *mods_list = cJSON_AddArrayToObject(version, "mods");
+        char *modloader_name = modloader->valuestring;
+        if (strcmp(modloader_name, "FML") == 0)
+        {
+          cJSON *modlist = cJSON_GetObjectItem(ji_modinfo, "modList");
+          for (int i = 0; i < cJSON_GetArraySize(modlist); i++)
+          {
+            cJSON *mod = cJSON_GetArrayItem(modlist, i);
+            snprintf(modname, 1024, "%s@%s",
+                cJSON_GetObjectItem(mod, "modid")->valuestring,
+                cJSON_GetObjectItem(mod, "version")->valuestring);
+            cJSON_AddItemToArray(mods_list, cJSON_CreateString(modname));
+          }
+        }
+      }
+
+      cJSON *players = cJSON_AddObjectToObject(server, "players");
+      cJSON_AddNumberToObject(players, "online",
+          cJSON_GetObjectItem(ji_players, "online")->valuedouble);
+      cJSON_AddNumberToObject(players, "max",
+          cJSON_GetObjectItem(ji_players, "max")->valuedouble);
+      cJSON *players_list = cJSON_AddArrayToObject(players, "sample");
+      cJSON *players_sample = cJSON_GetObjectItem(ji_players, "sample");
+      if (players_sample != NULL)
+      {
+        for (int i = 0; i < cJSON_GetArraySize(players_sample); i++)
+        {
+          cJSON *s_player = cJSON_GetArrayItem(players_sample, i);
+          cJSON *player = cJSON_CreateObject();
+          cJSON_AddStringToObject(player, "uuid",
+              cJSON_GetObjectItem(s_player, "id")->valuestring);
+          cJSON_AddStringToObject(player, "name",
+              cJSON_GetObjectItem(s_player, "name")->valuestring);
+          cJSON_AddItemToArray(players_list, player);
+        }
+      }
+
+      cJSON_Delete(j_info);
+      cJSON_AddItemToArray(j_results, server);
     }
 
+    char *string = cJSON_Print(response);
+    cJSON_Delete(response);
+    cJSON_Minify(string);
+    fwrite(string, 1, strlen(string), outfile);
   }
 
   if (outfile != stdout)

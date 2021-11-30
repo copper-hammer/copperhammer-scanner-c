@@ -7,7 +7,7 @@ EXTLIBS=src/extras/cjson/cJSON.o
 all: main
 	
 run: all
-	bin/main
+	bin/main ${RUN_ARGS}
 
 clean:
 	${RM} ${LIBOBJS} bin/main || true

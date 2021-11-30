@@ -11,5 +11,6 @@ void hexdumpf_relative(void *data, size_t size, FILE *file);
 void hexdumpfp(void *data, size_t size, FILE *file, const char *prefix);
 
 void swap_bytes(void *data, size_t len);
+void mcs_chat_to_string(cJSON *message, char *result, size_t limit);
 
 #endif

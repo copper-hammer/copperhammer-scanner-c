@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 #define DEFAULT_HOST "127.0.0.1"
 #define DEFAULT_PORT1 22
@@ -27,6 +28,18 @@ typedef struct serverinfo_t {
   ssize_t response_len;
   uint8_t response[32768];
 } serverinfo_t;
+
+typedef struct scanner_thread_t {
+  pthread_t *thread;
+  pthread_mutex_t *lock;
+  uint16_t port_start;
+  uint16_t port_end;
+  char host[64];
+  outmode_n omode;
+  struct serverinfo_t **servers;
+} scanner_thread_t;
+
+void *scanner_thread(void *params);
 
 void usage(char *progname, FILE *file, int exitcode)
 {
@@ -126,47 +139,41 @@ int main(int argc, char **argv)
       die("Failed to open output file");
   }
 
-  if (n_threads >= 0)
-    die("Multi-thread support is not implemented yet");
+  struct scanner_thread_t *scan_threads;
+  pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+  struct serverinfo_t *servers = NULL;
   
-  struct serverinfo_t *servers;
-  uint8_t buffer[32768];
-  ssize_t len;
-  for (uint16_t port = range_start; port <= range_end; port++)
+  // XXX: Scan start here
+  if (n_threads >= 0)
   {
-    DBG(LOG_INFO, "Scanning %s:%d", host, port);
-    struct socket_t *sock = socket_create(host, port, AF_INET);
-    socket_settimeout(sock, 500);
-    if (socket_connect(sock) < 0)
+    scan_threads = calloc(n_threads, sizeof(struct scanner_thread_t));
+    int ports_per_thread = (range_end - range_start) / n_threads;
+    int port = range_start;
+    for (int i = 0; i < n_threads; i++)
     {
-      socket_close(sock);
-      continue;
+      scan_threads[i].lock = &lock;
+      scan_threads[i].port_start = port;
+      scan_threads[i].port_end = port + ports_per_thread;
+      strncpy(scan_threads[i].host, host, 64);
+      scan_threads[i].servers = &servers;
+      DBG(LOG_WARN, "port range from %d to %d",
+          port, port + ports_per_thread);
+      port += ports_per_thread;
     }
     
-    if (mcp_send_ping(sock, host, port, 756) < 0)
-    {
-      socket_close(sock);
-      continue;
-    }
-    
-    if (output_mode == OMODE_HEX)
-      len = socket_recv(sock, buffer, 32768);
-    else
-      len = mcp_read_pong(sock, buffer, 32768);
-
-    socket_close(sock);
-    DBG(LOG_DEBUG, "Result: %ld", len);
-    if (len >= 0)
-    {
-      struct serverinfo_t info;
-      strncpy(info.host, host, 64);
-      info.host[63] = '\0';
-      info.port = port;
-      info.response_len = len;
-      memcpy(info.response, buffer, 32768);
-      arrput(servers, info);
-    }
+    free(scan_threads);
   }
+  else
+  {
+    struct scanner_thread_t thr; // It's single, but it is thread!
+    thr.port_start = range_start;
+    thr.port_end = range_end;
+    strncpy(thr.host, host, 64);
+    thr.servers = &servers;
+    thr.omode = output_mode;
+    scanner_thread(&thr);
+  }
+  // XXX: Scan end here
   
   gettimeofday(&tv_stop, NULL);
   double execution_time = (double)(tv_stop.tv_usec - tv_start.tv_usec) / 1e6;
@@ -311,4 +318,51 @@ int main(int argc, char **argv)
   
   arrfree(servers);
   return EXIT_SUCCESS;
+}
+
+void *scanner_thread(void *_params)
+{
+  struct scanner_thread_t *params = _params;
+  uint8_t buffer[32768];
+  ssize_t len;
+  for (uint16_t port = params->port_start; port <= params->port_end; port++)
+  {
+    DBG(LOG_INFO, "Scanning %s:%d", params->host, port);
+    struct socket_t *sock = socket_create(params->host, port, AF_INET);
+    socket_settimeout(sock, 500);
+    if (socket_connect(sock) < 0)
+    {
+      socket_close(sock);
+      continue;
+    }
+    
+    if (mcp_send_ping(sock, params->host, port, 756) < 0)
+    {
+      socket_close(sock);
+      continue;
+    }
+    
+    if (params->omode == OMODE_HEX)
+      len = socket_recv(sock, buffer, 32768);
+    else
+      len = mcp_read_pong(sock, buffer, 32768);
+
+    socket_close(sock);
+    DBG(LOG_DEBUG, "Result: %ld", len);
+    if (len >= 0)
+    {
+      struct serverinfo_t info;
+      strncpy(info.host, params->host, 64);
+      info.host[63] = '\0';
+      info.port = port;
+      info.response_len = len;
+      memcpy(info.response, buffer, 32768);
+      if (params->lock != NULL)
+        pthread_mutex_lock(params->lock);
+      arrput(*params->servers, info);
+      if (params->lock != NULL)
+        pthread_mutex_unlock(params->lock);
+    }
+  }
+  return NULL;
 }

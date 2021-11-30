@@ -158,7 +158,7 @@ int main(int argc, char **argv)
     DBG(LOG_DEBUG, "Result: %ld", len);
     if (len >= 0)
     {
-      struct serverinfo_t info;;
+      struct serverinfo_t info;
       strncpy(info.host, host, 64);
       info.host[63] = '\0';
       info.port = port;
@@ -300,10 +300,10 @@ int main(int argc, char **argv)
       cJSON_AddItemToArray(j_results, server);
     }
 
-    char *string = cJSON_Print(response);
+    char *string = cJSON_PrintUnformatted(response);
     cJSON_Delete(response);
-    cJSON_Minify(string);
     fwrite(string, 1, strlen(string), outfile);
+    free(string);
   }
 
   if (outfile != stdout)

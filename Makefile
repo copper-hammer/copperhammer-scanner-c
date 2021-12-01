@@ -1,6 +1,6 @@
 CFLAGS=-g -Wall -pedantic -Wno-pointer-arith
 LDFLAGS=
-LDLIBS=-lm
+LDLIBS=-lm -lpthread
 LIBOBJS=lib/sockio.o lib/mcping.o lib/utils.o lib/mcproto.o lib/stb_ds.o lib/logging.o
 EXTLIBS=src/extras/cjson/cJSON.o
 

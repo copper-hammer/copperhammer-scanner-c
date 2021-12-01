@@ -1,6 +1,7 @@
 #include "logging.h"
 #include "utils.h"
 #include <stdarg.h>
+#include <pthread.h>
 
 const char *loglevel_names[7] = {
   "QUIET", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "TRACE+"
@@ -12,7 +13,8 @@ void debug_print(char *file, int line, loglevel_n lvl, const char *fmt, ...)
   char buf[2048];
   va_start(args, fmt);
   vsnprintf(buf, 2048, fmt, args);
-  fprintf(stderr, "%-5s %s:%d: %s\n", get_loglevel_name(lvl), file, line, buf);
+  fprintf(stderr, "%-5s [T%08lx] %s:%d: %s\n",
+      get_loglevel_name(lvl), pthread_self(), file, line, buf);
   va_end(args);
 }
 

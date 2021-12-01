@@ -30,10 +30,12 @@ typedef struct serverinfo_s {
 } serverinfo_t;
 
 typedef struct scanner_thread_s {
-  pthread_t *thread;
+  pthread_t thread;
   pthread_mutex_t *lock;
   uint16_t port_start;
   uint16_t port_end;
+  uint16_t thr_offset;
+  uint16_t threads;
   char host[64];
   outmode_n omode;
   serverinfo_t **servers;
@@ -53,7 +55,7 @@ void usage(char *progname, FILE *f, int exitcode)
   fprintf(f, "  -X\t\tOutput as hexdump\n");
   fprintf(f, "  -o fname\tWrite results to this f\n");
   fprintf(f, "\t\t`-` means STDOUT (default)\n");
-  fprintf(f, "  -t threads\tNOT IMPLEMENTED YET\n");
+  fprintf(f, "  -t threads\tnumber of scanner threads. no limit.\n");
   fprintf(f, "  HOST\t\tHost to scan (def: "DEFAULT_HOST")\n");
   fprintf(f, "  PORT_START\tStart of port range (def: %d)\n", DEFAULT_PORT1);
   fprintf(f, "  PORT_END\tStart of port range (def: %d)\n", DEFAULT_PORT2);
@@ -144,21 +146,27 @@ int main(int argc, char **argv)
   serverinfo_t *servers = NULL;
   
   // XXX: Scan start here
-  if (n_threads >= 0)
+  if (n_threads > 0)
   {
+    DBG(LOG_WARN, "Using thrads may be faster, but it's not as tested");
+    DBG(LOG_WARN, "as single-threaded mode. Use at your own risk.");
     scan_threads = calloc(n_threads, sizeof(scanner_thread_t));
-    int ports_per_thread = (range_end - range_start) / n_threads;
-    int port = range_start;
     for (int i = 0; i < n_threads; i++)
     {
       scan_threads[i].lock = &lock;
-      scan_threads[i].port_start = port;
-      scan_threads[i].port_end = port + ports_per_thread;
+      scan_threads[i].port_start = range_start;
+      scan_threads[i].port_end = range_end;
+      scan_threads[i].threads = n_threads;
+      scan_threads[i].thr_offset = i;
       strncpy(scan_threads[i].host, host, 64);
       scan_threads[i].servers = &servers;
-      DBG(LOG_WARN, "port range from %d to %d",
-          port, port + ports_per_thread);
-      port += ports_per_thread;
+      pthread_create(&scan_threads[i].thread, NULL,
+                    scanner_thread, (void *)(scan_threads + i));
+    }
+    
+    for (int i = 0; i < n_threads; i++)
+    {
+      pthread_join(scan_threads[i].thread, NULL);
     }
     
     free(scan_threads);
@@ -168,6 +176,8 @@ int main(int argc, char **argv)
     scanner_thread_t thr; // It's single, but it is thread!
     thr.port_start = range_start;
     thr.port_end = range_end;
+    thr.threads = 1;
+    thr.thr_offset = 0;
     strncpy(thr.host, host, 64);
     thr.servers = &servers;
     thr.omode = output_mode;
@@ -323,15 +333,18 @@ int main(int argc, char **argv)
   return EXIT_SUCCESS;
 }
 
-void *scanner_thread(void *_params)
+void *scanner_thread(void *params)
 {
-  scanner_thread_t *params = _params;
+  scanner_thread_t *p = params;
   uint8_t buffer[32768];
   ssize_t len;
-  for (uint16_t port = params->port_start; port <= params->port_end; port++)
+  DBG(LOG_INFO, "Thread started with index %d", p->thr_offset);
+  int scanned = 0, found = 0;
+  for (uint32_t port = p->port_start; port <= p->port_end; port += p->threads)
   {
-    DBG(LOG_INFO, "Scanning %s:%d", params->host, port);
-    socket_t *sock = socket_create(params->host, port, AF_INET);
+    DBG(LOG_INFO, "Scanning %s:%d", p->host, port + p->thr_offset);
+    socket_t *sock = socket_create(p->host, port + p->thr_offset, AF_INET);
+    scanned++;
     socket_settimeout(sock, 500);
     if (socket_connect(sock) < 0)
     {
@@ -339,13 +352,13 @@ void *scanner_thread(void *_params)
       continue;
     }
     
-    if (mcp_send_ping(sock, params->host, port, 756) < 0)
+    if (mcp_send_ping(sock, p->host, port + p->thr_offset, 756) < 0)
     {
       socket_close(sock);
       continue;
     }
     
-    if (params->omode == OMODE_HEX)
+    if (p->omode == OMODE_HEX)
       len = socket_recv(sock, buffer, 32768);
     else
       len = mcp_read_pong(sock, buffer, 32768);
@@ -354,18 +367,21 @@ void *scanner_thread(void *_params)
     DBG(LOG_DEBUG, "Result: %ld", len);
     if (len >= 0)
     {
+      found++;
       serverinfo_t info;
-      strncpy(info.host, params->host, 64);
+      strncpy(info.host, p->host, 64);
       info.host[63] = '\0';
-      info.port = port;
+      info.port = port + p->thr_offset;
       info.response_len = len;
       memcpy(info.response, buffer, 32768);
-      if (params->lock != NULL)
-        pthread_mutex_lock(params->lock);
-      arrput(*params->servers, info);
-      if (params->lock != NULL)
-        pthread_mutex_unlock(params->lock);
+      if (p->lock != NULL)
+        pthread_mutex_lock(p->lock);
+      arrput(*p->servers, info);
+      if (p->lock != NULL)
+        pthread_mutex_unlock(p->lock);
     }
   }
+  DBG(LOG_INFO, "Thread stoped with index %d, scanned %d, found %d",
+      p->thr_offset, scanned, found);
   return NULL;
 }

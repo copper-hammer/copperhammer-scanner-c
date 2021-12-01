@@ -9,8 +9,12 @@ all: main
 run: all
 	bin/main ${RUN_ARGS}
 
-clean:
+clean: clean_json clean_bin
+
+clean_bin:
 	${RM} ${LIBOBJS} bin/main || true
+
+clean_json:
 	( cd src/extras/cjson; make clean )
 
 main: cjson ${LIBOBJS}

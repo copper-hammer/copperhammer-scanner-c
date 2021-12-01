@@ -22,21 +22,21 @@ typedef enum {
   OMODE_HEX = 3
 } outmode_n;
 
-typedef struct serverinfo_t {
+typedef struct serverinfo_s {
   char host[64];
   uint16_t port;
   ssize_t response_len;
   uint8_t response[32768];
 } serverinfo_t;
 
-typedef struct scanner_thread_t {
+typedef struct scanner_thread_s {
   pthread_t *thread;
   pthread_mutex_t *lock;
   uint16_t port_start;
   uint16_t port_end;
   char host[64];
   outmode_n omode;
-  struct serverinfo_t **servers;
+  serverinfo_t **servers;
 } scanner_thread_t;
 
 void *scanner_thread(void *params);
@@ -139,14 +139,14 @@ int main(int argc, char **argv)
       die("Failed to open output file");
   }
 
-  struct scanner_thread_t *scan_threads;
+  scanner_thread_t *scan_threads;
   pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-  struct serverinfo_t *servers = NULL;
+  serverinfo_t *servers = NULL;
   
   // XXX: Scan start here
   if (n_threads >= 0)
   {
-    scan_threads = calloc(n_threads, sizeof(struct scanner_thread_t));
+    scan_threads = calloc(n_threads, sizeof(scanner_thread_t));
     int ports_per_thread = (range_end - range_start) / n_threads;
     int port = range_start;
     for (int i = 0; i < n_threads; i++)
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
   }
   else
   {
-    struct scanner_thread_t thr; // It's single, but it is thread!
+    scanner_thread_t thr; // It's single, but it is thread!
     thr.port_start = range_start;
     thr.port_end = range_end;
     strncpy(thr.host, host, 64);
@@ -179,7 +179,7 @@ int main(int argc, char **argv)
   double execution_time = (double)(tv_stop.tv_usec - tv_start.tv_usec) / 1e6;
   execution_time += (double)(tv_stop.tv_sec - tv_start.tv_sec);
 
-  struct serverinfo_t info;
+  serverinfo_t info;
   if (output_mode != OMODE_JSON)
   {
     cJSON *root;
@@ -322,13 +322,13 @@ int main(int argc, char **argv)
 
 void *scanner_thread(void *_params)
 {
-  struct scanner_thread_t *params = _params;
+  scanner_thread_t *params = _params;
   uint8_t buffer[32768];
   ssize_t len;
   for (uint16_t port = params->port_start; port <= params->port_end; port++)
   {
     DBG(LOG_INFO, "Scanning %s:%d", params->host, port);
-    struct socket_t *sock = socket_create(params->host, port, AF_INET);
+    socket_t *sock = socket_create(params->host, port, AF_INET);
     socket_settimeout(sock, 500);
     if (socket_connect(sock) < 0)
     {
@@ -351,7 +351,7 @@ void *scanner_thread(void *_params)
     DBG(LOG_DEBUG, "Result: %ld", len);
     if (len >= 0)
     {
-      struct serverinfo_t info;
+      serverinfo_t info;
       strncpy(info.host, params->host, 64);
       info.host[63] = '\0';
       info.port = port;

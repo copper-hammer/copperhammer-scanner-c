@@ -6,34 +6,34 @@
 #include <string.h>
 #include <stdbool.h>
 
-void hexdump_impl(void *data, size_t size, int type, FILE *file, const char *prefix);
+void hexdump_impl(const void *data, size_t size, int type, FILE *file, const char *prefix);
 
-void hexdump(void *data, size_t size)
+void hexdump(const void *data, size_t size)
 {
   hexdumpf(data, size, stdout);
 }
 
-void hexdump_relative(void *data, size_t size)
+void hexdump_relative(const void *data, size_t size)
 {
   hexdumpf_relative(data, size, stdout);
 }
 
-void hexdumpf(void *data, size_t size, FILE *file)
+void hexdumpf(const void *data, size_t size, FILE *file)
 {
   hexdump_impl(data, size, 0, file, "");
 }
 
-void hexdumpf_relative(void *data, size_t size, FILE *file)
+void hexdumpf_relative(const void *data, size_t size, FILE *file)
 {
   hexdump_impl(data, size, 1, file, "");
 }
 
-void hexdumpfp(void *data, size_t size, FILE *file, const char *prefix)
+void hexdumpfp(const void *data, size_t size, FILE *file, const char *prefix)
 {
   hexdump_impl(data, size, 0, file, prefix);
 }
 
-void hexdump_impl(void *data, size_t size, int type, FILE *file, const char *prefix)
+void hexdump_impl(const void *data, size_t size, int type, FILE *file, const char *prefix)
 {
   for (size_t i = 0; i < size; i += 16)
   {

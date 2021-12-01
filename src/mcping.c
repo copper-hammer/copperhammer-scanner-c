@@ -5,14 +5,14 @@
 #include <string.h>
 
 
-ssize_t mcp_send_ping(struct socket_t *sock, const char *host, const uint16_t port, int32_t ver)
+ssize_t mcp_send_ping(socket_t *sock, const char *host, const uint16_t port, int32_t ver)
 {
   uint8_t buffer[1024];
   ssize_t pkt_size = mcp_ping_make_packet(host, port, ver, buffer, 1024);
   return socket_send(sock, buffer, pkt_size);
 }
 
-ssize_t mcp_read_pong(struct socket_t *sock, void *buffer, size_t lim)
+ssize_t mcp_read_pong(socket_t *sock, void *buffer, size_t lim)
 {
   int32_t len;
 #if __APPLE__

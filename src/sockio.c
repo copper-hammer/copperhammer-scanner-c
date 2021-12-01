@@ -12,15 +12,15 @@ bool socket_init()
   return true;
 }
 
-struct socket_t *socket_create(const char *host, const uint16_t port, int type)
+socket_t *socket_create(const char *host, const uint16_t port, int type)
 {
   if (type != AF_INET && type != AF_INET6)
   {
     DBG(LOG_WARN, "Invalid socket type %d, expected AF_INET or AF_INET6", type);
     return NULL;
   }
-  struct socket_t *sock = malloc(sizeof(struct socket_t));
-  memset(sock, 0, sizeof(struct socket_t));
+  socket_t *sock = malloc(sizeof(socket_t));
+  memset(sock, 0, sizeof(socket_t));
   sock->domain = type;
   sock->type = SOCK_STREAM;
   sock->protocol = 0;
@@ -64,7 +64,7 @@ struct socket_t *socket_create(const char *host, const uint16_t port, int type)
   return sock;
 }
 
-int socket_settimeout(struct socket_t *sock, uint64_t msec)
+int socket_settimeout(socket_t *sock, uint64_t msec)
 {
   struct timeval timeout;
   timeout.tv_sec = msec / 1000;
@@ -73,7 +73,7 @@ int socket_settimeout(struct socket_t *sock, uint64_t msec)
       (void *)&timeout, sizeof(struct timeval));
 }
 
-int socket_connect(struct socket_t *sock)
+int socket_connect(socket_t *sock)
 {
   int result = -1;
   switch (sock->domain)
@@ -92,7 +92,7 @@ int socket_connect(struct socket_t *sock)
   return result;
 }
 
-ssize_t socket_send(struct socket_t *sock, const void *data, size_t length)
+ssize_t socket_send(socket_t *sock, const void *data, size_t length)
 {
   DBG(LOG_TRACE, "Sending %zd bytes at %p to %d:", length, data, sock->sockfd);
   DHEX(LOG_TRACE, data, length);
@@ -102,7 +102,7 @@ ssize_t socket_send(struct socket_t *sock, const void *data, size_t length)
   return res;
 }
 
-ssize_t __socket_recv(struct socket_t *sock, void *data, size_t lim, int flags)
+ssize_t __socket_recv(socket_t *sock, void *data, size_t lim, int flags)
 {
   DBG(LOG_TRACE, "recv(sock:%d, data:%p, lim:%zu, flags:%08x) called",
       sock->sockfd, data, lim, flags);
@@ -120,22 +120,22 @@ ssize_t __socket_recv(struct socket_t *sock, void *data, size_t lim, int flags)
   return res;
 }
 
-ssize_t socket_recv(struct socket_t *sock, void *data, size_t lim)
+ssize_t socket_recv(socket_t *sock, void *data, size_t lim)
 {
   return __socket_recv(sock, data, lim, 0);
 }
 
-ssize_t socket_recvall(struct socket_t *sock, void *data, size_t len)
+ssize_t socket_recvall(socket_t *sock, void *data, size_t len)
 {
   return __socket_recv(sock, data, len, MSG_WAITALL);
 }
 
-ssize_t socket_peek(struct socket_t *sock, void *data, size_t len)
+ssize_t socket_peek(socket_t *sock, void *data, size_t len)
 {
   return __socket_recv(sock, data, len, MSG_PEEK | MSG_WAITALL);
 }
 
-void socket_close(struct socket_t *sock)
+void socket_close(socket_t *sock)
 {
   if (sock->sockfd >= 0)
     close(sock->sockfd);

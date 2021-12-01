@@ -241,59 +241,59 @@ uint8_t *mc_read_varlong(uint8_t *buf, int64_t *value)
 }
 
 // Socket-bound read functions
-ssize_t mc_sread_boolean(struct socket_t *so, bool *val)
+ssize_t mc_sread_boolean(socket_t *so, bool *val)
 {
   return socket_recvall(so, val, 1);
 }
 
-ssize_t mc_sread_byte(struct socket_t *so, int8_t *val)
+ssize_t mc_sread_byte(socket_t *so, int8_t *val)
 {
   return socket_recvall(so, val, 1);
 }
 
-ssize_t mc_sread_ubyte(struct socket_t *so, uint8_t *val)
+ssize_t mc_sread_ubyte(socket_t *so, uint8_t *val)
 {
   return socket_recvall(so, val, 1);
 }
 
-ssize_t mc_sread_short(struct socket_t *so, int16_t *val)
+ssize_t mc_sread_short(socket_t *so, int16_t *val)
 {
   ssize_t r = socket_recvall(so, val, 2);
   *val = be16toh(*val);
   return r;
 }
 
-ssize_t mc_sread_ushort(struct socket_t *so, uint16_t *val)
+ssize_t mc_sread_ushort(socket_t *so, uint16_t *val)
 {
   ssize_t r = socket_recvall(so, val, 2);
   *val = be16toh(*val);
   return r;
 }
 
-ssize_t mc_sread_int(struct socket_t *so, int32_t *val)
+ssize_t mc_sread_int(socket_t *so, int32_t *val)
 {
   ssize_t r = socket_recvall(so, val, 4);
   *val = be32toh(*val);
   return r;
 }
 
-ssize_t mc_sread_long(struct socket_t *so, int64_t *val)
+ssize_t mc_sread_long(socket_t *so, int64_t *val)
 {
   ssize_t r = socket_recvall(so, val, 8);
   *val = be64toh(*val);
   return r;
 }
 
-ssize_t mc_sread_float(struct socket_t *so, float *val)
+ssize_t mc_sread_float(socket_t *so, float *val)
 {
   return socket_recvall(so, val, 4);
 }
 
-ssize_t mc_sread_double(struct socket_t *so, double *val)
+ssize_t mc_sread_double(socket_t *so, double *val)
 {
   return socket_recvall(so, val, 8);
 }
-ssize_t mc_sread_string(struct socket_t *so, char *val, int32_t *len, ssize_t lim)
+ssize_t mc_sread_string(socket_t *so, char *val, int32_t *len, ssize_t lim)
 {
   ssize_t lr = mc_sread_varint(so, len);
   if (lr <= 0) return lr;
@@ -310,12 +310,12 @@ ssize_t mc_sread_string(struct socket_t *so, char *val, int32_t *len, ssize_t li
   return sr + lr;
 }
 
-ssize_t mc_sread_raw(struct socket_t *so, char *val, ssize_t len)
+ssize_t mc_sread_raw(socket_t *so, char *val, ssize_t len)
 {
   return socket_recvall(so, val, len);
 }
 
-ssize_t __mc_sread_varnum(struct socket_t *so, void *ptr, size_t len)
+ssize_t __mc_sread_varnum(socket_t *so, void *ptr, size_t len)
 {
   uint64_t *val = ptr;
   *val = 0;
@@ -341,67 +341,67 @@ ssize_t __mc_sread_varnum(struct socket_t *so, void *ptr, size_t len)
   return offset;
 }
 
-ssize_t mc_sread_varint(struct socket_t *so, int32_t *val)
+ssize_t mc_sread_varint(socket_t *so, int32_t *val)
 {
   return __mc_sread_varnum(so, val, 5);
 }
 
-ssize_t mc_sread_varlong(struct socket_t *so, int64_t *val)
+ssize_t mc_sread_varlong(socket_t *so, int64_t *val)
 {
   return __mc_sread_varnum(so, val, 10);
 }
 
 // Socket-bound write functions
-ssize_t mc_swrite_boolean(struct socket_t *so, bool val)
+ssize_t mc_swrite_boolean(socket_t *so, bool val)
 {
   return socket_send(so, &val, 1);
 }
 
-ssize_t mc_swrite_byte(struct socket_t *so, int8_t val)
+ssize_t mc_swrite_byte(socket_t *so, int8_t val)
 {
   return socket_send(so, &val, 1);
 }
 
-ssize_t mc_swrite_ubyte(struct socket_t *so, uint8_t val)
+ssize_t mc_swrite_ubyte(socket_t *so, uint8_t val)
 {
   return socket_send(so, &val, 1);
 }
 
-ssize_t mc_swrite_short(struct socket_t *so, int16_t val)
+ssize_t mc_swrite_short(socket_t *so, int16_t val)
 {
   val = htobe16(val);
   return socket_send(so, &val, 2);
 }
 
-ssize_t mc_swrite_ushort(struct socket_t *so, uint16_t val)
+ssize_t mc_swrite_ushort(socket_t *so, uint16_t val)
 {
   val = htobe16(val);
   return socket_send(so, &val, 2);
 }
 
-ssize_t mc_swrite_int(struct socket_t *so, int32_t val)
+ssize_t mc_swrite_int(socket_t *so, int32_t val)
 {
   val = htobe32(val);
   return socket_send(so, &val, 4);
 }
 
-ssize_t mc_swrite_long(struct socket_t *so, int64_t val)
+ssize_t mc_swrite_long(socket_t *so, int64_t val)
 {
   val = htobe64(val);
   return socket_send(so, &val, 8);
 }
 
-ssize_t mc_swrite_float(struct socket_t *so, float val)
+ssize_t mc_swrite_float(socket_t *so, float val)
 {
   return socket_send(so, &val, 4);
 }
 
-ssize_t mc_swrite_double(struct socket_t *so, double val)
+ssize_t mc_swrite_double(socket_t *so, double val)
 {
   return socket_send(so, &val, 8);
 }
 
-ssize_t mc_swrite_string(struct socket_t *so, char *val, int32_t length)
+ssize_t mc_swrite_string(socket_t *so, char *val, int32_t length)
 {
   ssize_t r;
   if ((r = mc_swrite_varint(so, length)) <= 0)
@@ -412,19 +412,19 @@ ssize_t mc_swrite_string(struct socket_t *so, char *val, int32_t length)
   return r + o;
 }
 
-ssize_t mc_swrite_raw(struct socket_t *so, uint8_t *val, ssize_t len)
+ssize_t mc_swrite_raw(socket_t *so, uint8_t *val, ssize_t len)
 {
   return socket_send(so, val, len);
 }
 
-ssize_t mc_swrite_varint(struct socket_t *so, int32_t val)
+ssize_t mc_swrite_varint(socket_t *so, int32_t val)
 {
   uint8_t buf[8]; size_t len = mc_size_varnum(val);
   mc_write_varint(buf, val);
   return socket_send(so, buf, len);
 }
 
-ssize_t mc_swrite_varlong(struct socket_t *so, int64_t val)
+ssize_t mc_swrite_varlong(socket_t *so, int64_t val)
 {
   uint8_t buf[8]; size_t len = mc_size_varnum(val);
   mc_write_varlong(buf, val);

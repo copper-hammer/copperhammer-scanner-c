@@ -182,10 +182,10 @@ int main(int argc, char **argv)
   serverinfo_t info;
   if (output_mode != OMODE_JSON)
   {
-    cJSON *root;
     fprintf(outfile, "Execution time: %lf\n", execution_time);
     for (int i = 0; i < arrlen(servers); i++)
     {
+      cJSON *root;
       info = servers[i];
       switch (output_mode)
       {
@@ -234,9 +234,9 @@ int main(int argc, char **argv)
     
     char modname[1024];
     char servername[8192];
-    cJSON *j_info;
     for (int i = 0; i < arrlen(servers); i++)
     {
+      cJSON *j_info;
       info = servers[i];
       DBG(LOG_INFO, "Adding %s:%d", info.host, info.port);
       if ((j_info = cJSON_ParseWithLength(

@@ -25,3 +25,7 @@ lib/%.o: src/%.c
 
 cjson:
 	( cd src/extras/cjson; make )
+
+valgrind:
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes \
+		./bin/main ${RUN_ARGS}

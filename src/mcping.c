@@ -25,8 +25,8 @@ ssize_t mcp_read_pong(socket_t *sock, void *buffer, size_t lim)
 #endif
   if (len <= 0 || len > 32768)
     return -1;
-  size_t n_bytes = lim < len ? lim : len;
-  size_t r;
+  ssize_t n_bytes = lim < len ? lim : len;
+  ssize_t r;
   DBG(LOG_TRACE, "pkt %zd long, %zd limit", len, lim);
   if ((r = mc_sread_raw(sock, buffer, n_bytes)) <= 0)
   {
@@ -41,7 +41,7 @@ ssize_t mcp_read_pong(socket_t *sock, void *buffer, size_t lim)
   DBG(LOG_TRACE, "pkt type: %02x", pkt_type);
   if (pkt_type != 0x00)
     return -1;
-  tp = mc_read_string(tp, buffer, &len, lim);
+  mc_read_string(tp, buffer, &len, lim);
   if (len < lim)
     memset((uint8_t *)buffer + len, 0, lim - len);
   return len;

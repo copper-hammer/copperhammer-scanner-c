@@ -5,11 +5,11 @@
 #include <string.h>
 
 
-ssize_t mcp_send_ping(socket_t *sock, const char *host, const uint16_t port, int32_t ver)
-{
+ssize_t mcp_send_ping(socket_t *s,
+    const char *host, const uint16_t port, int32_t ver) {
   uint8_t buffer[1024];
   ssize_t pkt_size = mcp_ping_make_packet(host, port, ver, buffer, 1024);
-  return socket_send(sock, buffer, pkt_size);
+  return socket_send(s, buffer, pkt_size);
 }
 
 ssize_t mcp_read_pong(socket_t *sock, void *buffer, size_t lim)
@@ -47,19 +47,20 @@ ssize_t mcp_read_pong(socket_t *sock, void *buffer, size_t lim)
   return len;
 }
 
-ssize_t mcp_ping_make_packet(const char *host, uint16_t port, int32_t ver, void *buffer, size_t lim)
+ssize_t mcp_ping_make_packet(const char *host, uint16_t port,
+    int32_t ver, void *buf, size_t lim)
 {
-  uint8_t *tp = buffer;
+  uint8_t *tp = buf;
   tp += mc_write_ubyte(tp, 0x00); // PACKET_HANDSHAKE
   tp += mc_write_varint(tp, ver);
   tp += mc_write_string(tp, (char *)host, strlen(host));
   tp += mc_write_ushort(tp, port);
   tp += mc_write_varint(tp, 1); // NEXT_STATE=STATUS
-  size_t packet_size = tp - (uint8_t *)buffer;
-  memmove((uint8_t *)buffer + mc_size_varnum(packet_size), buffer, packet_size);
-  tp = ((uint8_t *)buffer) + mc_write_varint(buffer, packet_size) + packet_size;
+  size_t packet_size = tp - (uint8_t *)buf;
+  memmove((uint8_t *)buf + mc_size_varnum(packet_size), buf, packet_size);
+  tp = ((uint8_t *)buf) + mc_write_varint(buf, packet_size) + packet_size;
   tp += mc_write_varint(tp, 1);
   tp += mc_write_ubyte(tp, 0);
-  return tp - (uint8_t *)buffer;
+  return tp - (uint8_t *)buf;
 }
 

@@ -41,22 +41,22 @@ typedef struct scanner_thread_s {
 
 void *scanner_thread(void *params);
 
-void usage(char *progname, FILE *file, int exitcode)
+void usage(char *progname, FILE *f, int exitcode)
 {
-  fprintf(file, "Usage: %s ", progname);
-  fprintf(file, "[-hvJTRX] [-o file] [-t thr] HOST [PORT_START] [PORT_END]\n\n");
-  fprintf(file, "  -h\t\tShow this help\n");
-  fprintf(file, "  -v\t\tBe verbose\n");
-  fprintf(file, "  -J\t\tOutput in JSON\n");
-  fprintf(file, "  -T\t\tOutput as text (default)\n");
-  fprintf(file, "  -R\t\tOutput as raw data\n");
-  fprintf(file, "  -X\t\tOutput as hexdump\n");
-  fprintf(file, "  -o filename\tWrite results to this file\n");
-  fprintf(file, "\t\t`-` means STDOUT (default)\n");
-  fprintf(file, "  -t threads\tNOT IMPLEMENTED YET\n");
-  fprintf(file, "  HOST\t\tHost to scan (def: "DEFAULT_HOST")\n");
-  fprintf(file, "  PORT_START\tStart of port range (def: %d)\n", DEFAULT_PORT1);
-  fprintf(file, "  PORT_END\tStart of port range (def: %d)\n", DEFAULT_PORT2);
+  fprintf(f, "Usage: %s ", progname);
+  fprintf(f, "[-hvJTRX] [-o f] [-t thr] HOST [PORT_START] [PORT_END]\n\n");
+  fprintf(f, "  -h\t\tShow this help\n");
+  fprintf(f, "  -v\t\tBe verbose\n");
+  fprintf(f, "  -J\t\tOutput in JSON\n");
+  fprintf(f, "  -T\t\tOutput as text (default)\n");
+  fprintf(f, "  -R\t\tOutput as raw data\n");
+  fprintf(f, "  -X\t\tOutput as hexdump\n");
+  fprintf(f, "  -o fname\tWrite results to this f\n");
+  fprintf(f, "\t\t`-` means STDOUT (default)\n");
+  fprintf(f, "  -t threads\tNOT IMPLEMENTED YET\n");
+  fprintf(f, "  HOST\t\tHost to scan (def: "DEFAULT_HOST")\n");
+  fprintf(f, "  PORT_START\tStart of port range (def: %d)\n", DEFAULT_PORT1);
+  fprintf(f, "  PORT_END\tStart of port range (def: %d)\n", DEFAULT_PORT2);
   exit(exitcode);
 }
 
@@ -196,14 +196,16 @@ int main(int argc, char **argv)
           break;
 
         case OMODE_RAW:
-          fprintf(outfile, "Server: %s:%d (%zd bytes):\n", info.host, info.port, info.response_len);
+          fprintf(outfile, "Server: %s:%d (%zd bytes):\n",
+              info.host, info.port, info.response_len);
           fwrite(info.response, 1, info.response_len, outfile);
           fprintf(outfile, "\n");
           break;
 
         case OMODE_TEXT:
           fprintf(outfile, "Server: %s:%d:\n", info.host, info.port);
-          if ((root = cJSON_ParseWithLength((char *)info.response, info.response_len)) == NULL)
+          if ((root = cJSON_ParseWithLength(
+                  (char *)info.response, info.response_len)) == NULL)
           {
             DBG(LOG_ERROR, "Invalid JSON received");
             fprintf(outfile, "Error: Invalid JSON\n");
@@ -237,7 +239,8 @@ int main(int argc, char **argv)
     {
       info = servers[i];
       DBG(LOG_INFO, "Adding %s:%d", info.host, info.port);
-      if ((j_info = cJSON_ParseWithLength((char *)info.response, info.response_len)) == NULL)
+      if ((j_info = cJSON_ParseWithLength(
+              (char *)info.response, info.response_len)) == NULL)
       {
         DBG(LOG_ERROR, "Failed to parse response %s:%d", info.host, info.port);
         continue;

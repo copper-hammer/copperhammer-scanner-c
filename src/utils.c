@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-void hexdump_impl(const void *data, size_t size, int type, FILE *file, const char *prefix);
+void hexdump_impl(const void *, size_t, int, FILE *, const char *);
 
 void hexdump(const void *data, size_t size)
 {
@@ -33,34 +33,35 @@ void hexdumpfp(const void *data, size_t size, FILE *file, const char *prefix)
   hexdump_impl(data, size, 0, file, prefix);
 }
 
-void hexdump_impl(const void *data, size_t size, int type, FILE *file, const char *prefix)
+void hexdump_impl(const void *data, size_t size,
+    int type, FILE *f, const char *prefix)
 {
   for (size_t i = 0; i < size; i += 16)
   {
     if (type == 0)
-      fprintf(file, "%s%p\t| ", prefix, (void *)((uint8_t *)data + i));
+      fprintf(f, "%s%p\t| ", prefix, (void *)((uint8_t *)data + i));
     else
-      fprintf(file, "%s%08zx\t| ", prefix, i);
+      fprintf(f, "%s%08zx\t| ", prefix, i);
     int k;
     for (k = 0; k < 16 && (k + i) < size; k++)
     {
-      fprintf(file, "%02x", ((uint8_t *)data)[k + i]);
-      if (k % 4 == 3) fprintf(file, " ");
+      fprintf(f, "%02x", ((uint8_t *)data)[k + i]);
+      if (k % 4 == 3) fprintf(f, " ");
     }
     for (; k < 16; k++)
     {
-      fprintf(file, "--");
-      if (k % 4 == 3) fprintf(file, " ");
+      fprintf(f, "--");
+      if (k % 4 == 3) fprintf(f, " ");
     }
-    fprintf(file, "|\t|");
+    fprintf(f, "|\t|");
     for (k = 0; k < 16 && (k + i) < size; k++)
     {
       if (isprint(((char *)data)[k + i]))
-        fprintf(file, "%c", ((char *)data)[k + i]);
+        fprintf(f, "%c", ((char *)data)[k + i]);
       else
-        fprintf(file, ".");
+        fprintf(f, ".");
     }
-    fprintf(file, "|\n");
+    fprintf(f, "|\n");
   }
 }
 

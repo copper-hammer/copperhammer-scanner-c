@@ -3,8 +3,10 @@
 #include <stdio.h>
 
 #define loglevel (*__get_loglevel_addr())
-#define DBG(level, ...) if (level <= loglevel) debug_print(__FILE__, __LINE__, level, __VA_ARGS__)
-#define DHEX(level, ptr, len) if (level <= loglevel) debug_hexdump(__FILE__, __LINE__, level, ptr, len)
+#define DBG(level, ...) \
+  if (level <= loglevel) debug_print(__FILE__, __LINE__, level, __VA_ARGS__)
+#define DHEX(level, ptr, len) \
+  if (level <= loglevel) debug_hexdump(__FILE__, __LINE__, level, ptr, len)
 #define DBGK(level, ...) if (level <= loglevel) fprintf(stderr, __VA_ARGS__)
 
 typedef enum {
@@ -18,8 +20,8 @@ typedef enum {
 } loglevel_n;
 
 extern loglevel_n *__get_loglevel_addr(void);
-void debug_print(char *filename, int line, loglevel_n level, const char *fmt, ...);
-void debug_hexdump(char *filename, int line, loglevel_n level, const void *ptr, size_t length);
-const char *get_loglevel_name(loglevel_n level);
+void debug_print(char *file, int ln, loglevel_n lvl, const char *fmt, ...);
+void debug_hexdump(char *file, int ln, loglevel_n lvl, const void *p, size_t l);
+const char *get_loglevel_name(loglevel_n lvl);
 
 #endif

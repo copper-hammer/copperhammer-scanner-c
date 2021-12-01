@@ -6,21 +6,21 @@ const char *loglevel_names[7] = {
   "QUIET", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "TRACE+"
 };
 
-void debug_print(char *filename, int line, loglevel_n level, const char *fmt, ...)
+void debug_print(char *file, int line, loglevel_n lvl, const char *fmt, ...)
 {
   va_list args;
-  char buffer[2048];
+  char buf[2048];
   va_start(args, fmt);
-  vsnprintf(buffer, 2048, fmt, args);
-  fprintf(stderr, "%-5s %s:%d: %s\n", get_loglevel_name(level), filename, line, buffer);
+  vsnprintf(buf, 2048, fmt, args);
+  fprintf(stderr, "%-5s %s:%d: %s\n", get_loglevel_name(lvl), file, line, buf);
   va_end(args);
 }
 
-void debug_hexdump(char *filename, int line, loglevel_n level, const void *ptr, size_t length)
+void debug_hexdump(char *f, int l, loglevel_n lvl, const void *ptr, size_t len)
 {
-  char buffer[1024];
-  snprintf(buffer, 1024, "%-5s %s:%d: ", get_loglevel_name(level), filename, line);
-  hexdumpfp(ptr, length, stderr, buffer);
+  char buf[1024];
+  snprintf(buf, 1024, "%-5s %s:%d: ", get_loglevel_name(lvl), f, l);
+  hexdumpfp(ptr, len, stderr, buf);
 }
 
 const char *get_loglevel_name(loglevel_n level)

@@ -14,18 +14,18 @@ ssize_t mcp_send_ping(socket_t *s,
 
 ssize_t mcp_read_pong(socket_t *sock, void *buffer, size_t lim)
 {
-  int32_t len;
+  ssize_t len;
 #if __APPLE__
   size_t lim_backup_macos_sucks = lim;
 #endif
-  if (mc_sread_varint(sock, &len) <= 0)
+  if (mc_sread_varint(sock, (int32_t *)&len) <= 0)
     return -1;
 #if __APPLE__
   lim = lim_backup_macos_sucks;
 #endif
   if (len <= 0 || len > 32768)
     return -1;
-  ssize_t n_bytes = lim < len ? lim : len;
+  ssize_t n_bytes = ((ssize_t)lim < len) ? (ssize_t)lim : len;
   ssize_t r;
   DBG(LOG_TRACE, "pkt %zd long, %zd limit", len, lim);
   if ((r = mc_sread_raw(sock, buffer, n_bytes)) <= 0)
@@ -41,8 +41,8 @@ ssize_t mcp_read_pong(socket_t *sock, void *buffer, size_t lim)
   DBG(LOG_TRACE, "pkt type: %02x", pkt_type);
   if (pkt_type != 0x00)
     return -1;
-  mc_read_string(tp, buffer, &len, lim);
-  if (len < lim)
+  mc_read_string(tp, buffer, (int32_t *)&len, lim);
+  if (len < (ssize_t)lim)
     memset((uint8_t *)buffer + len, 0, lim - len);
   return len;
 }
@@ -50,6 +50,7 @@ ssize_t mcp_read_pong(socket_t *sock, void *buffer, size_t lim)
 ssize_t mcp_ping_make_packet(const char *host, uint16_t port,
     int32_t ver, void *buf, size_t lim)
 {
+  (void)lim; // TODO: keep an eye on limits
   uint8_t *tp = buf;
   tp += mc_write_ubyte(tp, 0x00); // PACKET_HANDSHAKE
   tp += mc_write_varint(tp, ver);

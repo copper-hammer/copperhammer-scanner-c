@@ -7,6 +7,8 @@ const char *loglevel_names[7] = {
   "QUIET", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "TRACE+"
 };
 
+loglevel_n loglevel = LOG_NONE;
+
 void debug_print(char *file, int line, loglevel_n lvl, const char *fmt, ...)
 {
   va_list args;
@@ -31,8 +33,4 @@ const char *get_loglevel_name(loglevel_n level)
   return loglevel_names[level];
 }
 
-extern loglevel_n *__get_loglevel_addr(void)
-{
-  static loglevel_n level = LOG_NONE;
-  return &level;
-}
+

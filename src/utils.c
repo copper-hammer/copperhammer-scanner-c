@@ -68,7 +68,7 @@ void hexdump_impl(const void *data, size_t size,
 void swap_bytes(void *data, size_t len)
 {
   uint8_t *ptr = data;
-  for (ssize_t i = 0; i < len / 2; i++)
+  for (size_t i = 0; i < len / 2; i++)
   {
     uint8_t tmp = ptr[i];
     ptr[i] = ptr[len - i - 1];

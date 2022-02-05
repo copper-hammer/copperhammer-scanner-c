@@ -219,7 +219,7 @@ uint8_t *__mc_read_varnum(uint8_t *buf, void *ptr, size_t len)
   uint8_t currentByte;
   do
   {
-    if (offset >= len) {
+    if (offset >= (int)len) {
       *value = 0;
       return NULL;
     }
@@ -326,7 +326,7 @@ ssize_t __mc_sread_varnum(socket_t *so, void *ptr, size_t len)
     return r;
   do
   {
-    if (offset >= len)
+    if (offset >= (int)len)
     {
       DBG(LOG_WARN, "varnum out of bounds (%zd/%zd)", offset, len);
       *val = 0;

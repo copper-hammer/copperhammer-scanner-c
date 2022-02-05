@@ -1,4 +1,4 @@
-CFLAGS=-g -Wall -pedantic -Wno-pointer-arith
+CFLAGS=-Wall -Wextra -Werror -pedantic -Wno-pointer-arith
 LDFLAGS=
 LDLIBS=-lm -lpthread
 LIBOBJS=lib/sockio.o lib/mcping.o lib/utils.o lib/mcproto.o lib/stb_ds.o lib/logging.o
